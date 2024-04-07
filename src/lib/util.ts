@@ -81,7 +81,7 @@ export function AQIColor(value: number) {
 const average = (array: number[]) => array.reduce((a, b) => a + b) / array.length;
 
 export function noiseGenerator(city: string, metric: string, size: number) {
-    var seed = cyrb128(city);
+    var seed = cyrb128(city + metric);
     // Four 32-bit component hashes provide the seed for sfc32.
     var rand = sfc32(seed[0], seed[1], seed[2], seed[3]);
 
@@ -114,9 +114,9 @@ export function noiseGenerator(city: string, metric: string, size: number) {
     let randomOffset = rand() * 6;
     let divsior = 35;
     let randomPow = rand() * 2;
-
+    let randomPow2 = rand() * 5;
     for (let i = 0; i < 100; i++) {
-        newArray[i] = newArray[i] + Math.sin(randomOffset + Math.sqrt(2) * i / divsior) + Math.sin(randomOffset + Math.PI * Math.pow(i / divsior, randomPow))
+        newArray[i] = newArray[i] + Math.sin(randomOffset + Math.pow(Math.sqrt(2) * i / divsior, randomPow2)) + Math.sin(randomOffset + Math.PI * Math.pow(i / divsior, randomPow))
     }
 
     let variance = gaussianRandom(rand2);

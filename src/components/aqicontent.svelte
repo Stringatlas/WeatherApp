@@ -57,12 +57,8 @@
         <div id="abc">
             <p><b>{key.toUpperCase()}: </b>{value}µg/m<sup>3</sup></p>
             <p>Description: {showAir[key]}</p>
+            <Hc city={weatherData.location.name} metric={key} />
         </div>
-        <!-- {#if showAir[key]}
-            <div>
-                <Hc city={weatherData.location.name} metric={key} />
-            </div>
-        {/if} -->
     {/each}
 {/if}
 
