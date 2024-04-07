@@ -1,5 +1,19 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { genAI, generate, generateFrom } from "./lib/gemini";
+    import Titlebar from "./components/titlebar.svelte";
+    import Loadcircle from "./components/loadcircle.svelte";
+    import { Search } from "svelte-bootstrap-icons";
+    import {
+        getZipcodeByIP,
+        fetchWeatherFromQuery,
+        getAQIZipcode,
+        getAQICity,
+    } from "./lib/weather";
+
+    import Weathercontent from "./components/weathercontent.svelte";
+    import Aqicontent from "./components/aqicontent.svelte";
+    import { getJSONFromURL, getLatLong } from "./lib/util";
 
     enum Status {
         SUCCESS,
@@ -10,73 +24,226 @@
 
     let status = Status.LOADING;
 
-    async function fetchFromCity(query: string): Promise<Object> {
-        let url = `https://api.weatherapi.com/v1/current.json?key=683402e6138b4628989215433240604&q=${query}&aqi=yes`;
-        const jsonData = await getJSONFromURL(url);
-        return jsonData;
-    }
+    let weatherData: any = undefined;
+    let zipcode: any = undefined;
+    let geminiSummary: any = undefined;
 
-    async function getZipcodeByIP(ip: string = ""): Promise<string> {
-        let url = `https://geolocation-db.com/json/0daad5e0-82e7-11ee-92e0-f5d620c7dcb4${ip ? `/${ip}` : ""}`;
-        const jsonData = await getJSONFromURL(url);
+    let searchInput: string = "";
 
-        console.log("geolocation", jsonData);
-        return jsonData.postal;
-    }
-
-    async function getJSONFromURL(url: string) {
-        const response = await fetch(url, {
-            method: "GET",
-            mode: "cors",
-        });
-        const jsonData = await response.json();
-        return jsonData;
-    }
-
-    let weatherData: any = null;
+    let firstTime: boolean = true;
+    let aqi: number | undefined = undefined;
 
     onMount(async () => {
-        let zipcode = await getZipcodeByIP("185.61.158.127");
-        weatherData = await fetchFromCity(zipcode);
-        console.log(weatherData);
+        zipcode = await getZipcodeByIP();
+        if (zipcode === null) return;
+        updateData(zipcode);
     });
+
+    async function updateData(query: string) {
+        firstTime = false;
+        geminiSummary = undefined;
+        weatherData = undefined;
+
+        weatherData = await fetchWeatherFromQuery(query);
+        try {
+            aqi = await getAQIZipcode(query);
+        } catch {
+            aqi = await getAQICity(query);
+        }
+
+        geminiSummary = await generateFrom(JSON.stringify(weatherData));
+
+        console.log(weatherData);
+    }
 </script>
 
 <main>
-    {#if weatherData != null}
-        <div>Weather</div>
+    <Titlebar title={"Title"} />
+    <div class="search-bar">
+        <input
+            type="text"
+            placeholder="Search Zipcode, City"
+            bind:value={searchInput}
+        />
+        <button type="submit" on:click={() => updateData(searchInput)}
+            >Search</button
+        >
+    </div>
+    {#if weatherData != undefined}
+        {#if weatherData.error != null}
+            <h1>Invalid input</h1>
+        {:else}
+            <div class="container">
+                <div id="weather">
+                    <Weathercontent {weatherData} />
+                </div>
+                <div id="aqi">
+                    <Aqicontent {weatherData} {aqi} />
+                </div>
+            </div>
+
+            <div id="summary">
+                <h3>AI Summary</h3>
+                {#if geminiSummary == undefined}
+                    <div class="three-dots-loader"></div>
+                {:else}
+                    <p>{geminiSummary}</p>
+                {/if}
+            </div>
+
+            {#if firstTime}
+                <div id="changeLocation">
+                    <p>
+                        Not in {weatherData.location.name}, {weatherData
+                            .location.region}?
+                    </p>
+                </div>
+            {/if}
+        {/if}
+    {:else if zipcode === null}
+        <div>
+            <h3>Could not find your location</h3>
+            <p>Try disabling your adblocker</p>
+            <p>Otherwise, set your location in the search bar</p>
+        </div>
     {:else}
-        <div class="loader"></div>
+        <div class="center-container">
+            <Loadcircle />
+        </div>
     {/if}
 </main>
 
 <style>
-    .loader {
-        border: 16px solid #f3f3f3;
+    .container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    #summary {
+        background-color: #f0f0f0;
+        min-height: 35px;
+        padding-bottom: 0.5px;
+        border-radius: 1.5rem;
+    }
+
+    #summary p,
+    h3 {
+        margin: 1rem;
+    }
+
+    .three-dots-loader {
+        margin: 1rem 1rem 1rem 2rem;
+        width: 15px;
+        aspect-ratio: 1;
         border-radius: 50%;
-        border-top: 16px solid #2895b6;
-        width: 80px;
-        height: 80px;
-        -webkit-animation: spin 1s linear infinite; /* Safari */
-        animation: spin 1s linear infinite;
+        animation: l5 1s infinite linear alternate;
     }
 
-    /* Safari */
-    @-webkit-keyframes spin {
+    @keyframes l5 {
         0% {
-            -webkit-transform: rotate(0deg);
+            box-shadow:
+                20px 0 #000,
+                -20px 0 #0002;
+            background: #000;
+        }
+        33% {
+            box-shadow:
+                20px 0 #000,
+                -20px 0 #0002;
+            background: #0002;
+        }
+        66% {
+            box-shadow:
+                20px 0 #0002,
+                -20px 0 #000;
+            background: #0002;
         }
         100% {
-            -webkit-transform: rotate(360deg);
+            box-shadow:
+                20px 0 #0002,
+                -20px 0 #000;
+            background: #000;
         }
     }
 
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
+    #weather,
+    #aqi {
+        padding: 1rem;
+        background-color: #f0f0f0;
+        border-radius: 1.5rem;
+    }
+
+    @media screen and (min-width: 1000px) {
+        .container {
+            flex-direction: row;
         }
-        100% {
-            transform: rotate(360deg);
+
+        #weather,
+        #aqi {
+            width: 45%;
         }
+    }
+
+    @media screen and (max-width: 999px) {
+        .container {
+            flex-direction: column; /* Make divs stack on smaller screens */
+        }
+
+        #weather,
+        #aqi {
+            width: calc(100% - 2rem);
+        }
+    }
+
+    .search-bar {
+        display: flex;
+        justify-content: space-between; /* Space between elements */
+        align-items: center;
+        width: 80%; /* Span entire viewport width */
+        margin: 1rem auto; /* Add left & right margin, center horizontally */
+        padding: 0.5rem;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+    }
+
+    .search-bar input {
+        flex: 1; /* Input expands to fill remaining space */
+        border: none;
+        outline: none;
+        padding: 0.5rem;
+        border-radius: 3px;
+    }
+
+    .search-bar button {
+        padding: 0.5rem 1rem;
+        border: none;
+        background-color: #3498db;
+        color: white;
+        cursor: pointer;
+        border-radius: 0.2rem;
+    }
+
+    .search-bar button :hover {
+        background-color: #6899b9;
+    }
+
+    .center-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #changeLocation {
+        margin-left: 1rem;
+    }
+    #changeLocation p {
+        text-decoration: underline;
     }
 </style>
