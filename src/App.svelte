@@ -33,6 +33,11 @@
     let firstTime: boolean = true;
     let aqi: number | undefined = undefined;
 
+    function handleEnter(e: KeyboardEvent) {
+        if (e.key == "Enter") {
+            updateData(searchInput);
+        }
+    }
     onMount(async () => {
         zipcode = await getZipcodeByIP();
         if (zipcode === null) return;
@@ -64,6 +69,7 @@
             type="text"
             placeholder="Search Zipcode, City"
             bind:value={searchInput}
+            on:keydown={handleEnter}
         />
         <button type="submit" on:click={() => updateData(searchInput)}
             >Search</button
