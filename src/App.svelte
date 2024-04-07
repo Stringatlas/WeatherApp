@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { genAI, generate, generateFrom } from "./lib/gemini";
+    import { genAI, generateT, generateFrom } from "./lib/gemini";
     import Titlebar from "./components/titlebar.svelte";
     import Loadcircle from "./components/loadcircle.svelte";
     import { Search } from "svelte-bootstrap-icons";
@@ -9,11 +9,18 @@
         fetchWeatherFromQuery,
         getAQIZipcode,
         getAQICity,
+        getAQI,
+        getAirDataHistory,
     } from "./lib/weather";
 
     import Weathercontent from "./components/weathercontent.svelte";
     import Aqicontent from "./components/aqicontent.svelte";
-    import { getJSONFromURL, getLatLong } from "./lib/util";
+    import {
+        AQIColor,
+        getJSONFromURL,
+        getLatLong,
+        noiseGenerator,
+    } from "./lib/util";
 
     enum Status {
         SUCCESS,
@@ -42,6 +49,7 @@
         zipcode = await getZipcodeByIP();
         if (zipcode === null) return;
         updateData(zipcode);
+        firstTime = true;
     });
 
     async function updateData(query: string) {
@@ -50,20 +58,28 @@
         weatherData = undefined;
 
         weatherData = await fetchWeatherFromQuery(query);
-        try {
-            aqi = await getAQIZipcode(query);
-        } catch {
-            aqi = await getAQICity(query);
-        }
+        // console.log("weatherapi", weatherData);
 
+        aqi = await getAQI(weatherData.location.lat, weatherData.location.lon);
+        const currentDatetimeInMilliseconds = Date.now() - 1000 * 60 * 60 * 24;
+        const msLastWeek =
+            currentDatetimeInMilliseconds - 2 * 1000 * 60 * 60 * 24;
+
+        await getAirDataHistory(
+            weatherData.location.lat,
+            weatherData.location.lon,
+            msLastWeek,
+            currentDatetimeInMilliseconds,
+        );
         geminiSummary = await generateFrom(JSON.stringify(weatherData));
-
-        console.log(weatherData);
+        console.log(aqiColor);
     }
+
+    $: aqiColor = aqi ? AQIColor(aqi) : "#f0f0f0";
 </script>
 
 <main>
-    <Titlebar title={"Title"} />
+    <Titlebar title={"Weathair"} />
     <div class="search-bar">
         <input
             type="text"
@@ -84,7 +100,11 @@
                     <Weathercontent {weatherData} />
                 </div>
                 <div id="aqi">
-                    <Aqicontent {weatherData} {aqi} />
+                    <Aqicontent
+                        {weatherData}
+                        {aqi}
+                        backgroundColor={aqiColor}
+                    />
                 </div>
             </div>
 

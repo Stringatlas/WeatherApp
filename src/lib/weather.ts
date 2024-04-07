@@ -55,3 +55,10 @@ export async function getAQIZipcode(zipcode: string) {
     const geoLocation = await getLatLong(zipcode);
     return getAQI(geoLocation.lat, geoLocation.lon);
 }
+
+export async function getAirDataHistory(lat: string, lon: string, start: number, end: number) {
+    const url = `https://api.openweathermap.org/data/2.5/air_pollution/history?lat=${lat}&lon=${lon}&start=${start}&end=${end}&appid=${openWeather}`
+    const jsonData = await getJSONFromURL(url);
+    console.log(url)
+    console.log("openweather", jsonData);
+}

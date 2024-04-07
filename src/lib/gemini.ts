@@ -5,7 +5,7 @@ const geminiKey = import.meta.env.VITE_GEMINI_KEY;
 
 export const genAI = new GoogleGenerativeAI(geminiKey);
 
-export async function generate(prompt: string) {
+export async function generateT(prompt: string) {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const result = await model.generateContent(prompt);
@@ -18,5 +18,5 @@ export async function generate(prompt: string) {
 
 export async function generateFrom(data: string): Promise<string> {
     console.log("generating....");
-    return await generate(config.prompt + data);
+    return await generateT(config.prompt + data);
 }

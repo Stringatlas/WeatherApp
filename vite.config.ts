@@ -4,7 +4,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [svelte()],
-    // esbuild: {
-    //     drop: ['console'], // This removes console.log statements
-    // },
+    esbuild: {
+        drop: ['console'], // This removes console.log statements
+    },
 })
