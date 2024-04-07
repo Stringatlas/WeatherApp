@@ -1,18 +1,26 @@
 <script lang="ts">
     import { onMount } from "svelte";
 
+    enum Status {
+        SUCCESS,
+        MANUAL_INPUT,
+        WEATHER_API_ERROR,
+        LOADING,
+    }
+
+    let status = Status.LOADING;
+
     async function fetchFromCity(query: string): Promise<Object> {
-        let url = `http://api.weatherapi.com/v1/current.json?key=683402e6138b4628989215433240604&q=${query}&aqi=yes`;
+        let url = `https://api.weatherapi.com/v1/current.json?key=683402e6138b4628989215433240604&q=${query}&aqi=yes`;
         const jsonData = await getJSONFromURL(url);
         return jsonData;
     }
 
-    async function getZipcodeByIP(): Promise<string> {
-        let url =
-            "https://geolocation-db.com/json/0daad5e0-82e7-11ee-92e0-f5d620c7dcb4";
+    async function getZipcodeByIP(ip: string = ""): Promise<string> {
+        let url = `https://geolocation-db.com/json/0daad5e0-82e7-11ee-92e0-f5d620c7dcb4${ip ? `/${ip}` : ""}`;
         const jsonData = await getJSONFromURL(url);
 
-        // console.log("geolocation", jsonData);
+        console.log("geolocation", jsonData);
         return jsonData.postal;
     }
 
@@ -28,7 +36,7 @@
     let weatherData: any = null;
 
     onMount(async () => {
-        let zipcode = await getZipcodeByIP();
+        let zipcode = await getZipcodeByIP("185.61.158.127");
         weatherData = await fetchFromCity(zipcode);
         console.log(weatherData);
     });
