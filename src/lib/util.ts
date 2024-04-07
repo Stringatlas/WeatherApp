@@ -11,7 +11,7 @@ export async function getJSONFromURL(url: string) {
 }
 
 export async function getLatLong(zipcode: string) {
-    const url = `http://api.openweathermap.org/geo/1.0/zip?zip=${zipcode}&appid=${openWeather}`;
+    const url = `https://api.openweathermap.org/geo/1.0/zip?zip=${zipcode}&appid=${openWeather}`;
     const jsonData = await getJSONFromURL(url);
 
     console.log(jsonData);
